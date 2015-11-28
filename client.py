@@ -1,4 +1,6 @@
 import socket
+import fcntl
+import struct
 
 class Node:
 	ID = -1
@@ -8,7 +10,7 @@ class Node:
 		IP = _IP
 
 
-IP_SERVER = "127.0.0.1"
+IP_SERVER = "172.20.10.3"
 UDP_PORT = 5005
 
 self_ID = -1;
@@ -27,8 +29,8 @@ def get_ip_address(ifname):
 		return False, addr
 	return True,addr
 
-#up, MY_IP = get_it_address('wlan0')
-MY_IP = "127.0.0.2"
+up, MY_IP = get_ip_address('wlan0')
+#MY_IP = "127.0.0.2"
 
 print "UDP target IP:", IP_SERVER
 print "UDP target port:", UDP_PORT
@@ -48,7 +50,7 @@ def main():
 	text = data.split()
 	self_ID = int(text[0])
 	IP_root = text[1]
-	print "MEU ID: " + self_ID
+	print "MEU ID: ", self_ID
 	
 	# Mensagem de ACK 
 	MSG = "ACK"
@@ -74,7 +76,7 @@ def search_neighboors(IP):
 	sock.sendto("SEND_NEXT" , (IP, UDP_PORT))
 	
 	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-	sock.bind((MY_IP, PORTA))
+	#sock.bind((MY_IP, PORTA))
 	data, addr = sock.recvfrom(1024)
 	text = data.split(' ')
 	if int(text[0]) > self_ID:
@@ -96,7 +98,7 @@ def warn_neighboors():
 
 def msg_rcv():
 	sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
-	sock.bind((MY_IP, UDP_PORT))
+	#sock.bind((MY_IP, UDP_PORT))
 	while True:
 		data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
 		text = data.split()
