@@ -82,7 +82,7 @@ class Rendezvous:
 			data = json.loads(serial_data)	
 			#Teste
 			print data	
-			if data.strip() == 'hello':
+			if data[0].strip() == 'hello':
 				id = self.send_id(s, addr)
 
 				#Teste
@@ -97,14 +97,19 @@ class Rendezvous:
 				print "Recebi ack?"
 				print data
 
-				if data.strip() == 'ack':
+				if data[0].strip() == 'ack':
 					if id != -1:
 						self.remove_id(id)			
 						#Atualiza topologia
 						self.updateTopology(id)	
 						#Teste
 						print self.topology
-			
+			elif data[0].strip() == 'saiu':
+				#Atualiza topologia
+				self.updateTopology( int(data[1]), remove = True )
+				#Adiciona o id na lista de ids disponíveis
+				self.availableIDs.append( int(data[1]) )
+				self.availableIDs.sort()	
 			#Teste
 			#s.sendto("..", addr)	
 ##
@@ -149,7 +154,7 @@ class Rendezvous:
 			serial_data, addr = server.recvfrom(1024)
 			data = json.loads(serial_data)
 
-			if data.strip() == 'ack':
+			if data[0].strip() == 'ack':
 				return data, addr	
 
 	def remove_id(self, id):

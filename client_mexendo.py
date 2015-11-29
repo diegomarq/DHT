@@ -13,6 +13,29 @@ class Node:
 		self.PORT = _PORT
 		self.TTL = 20
 		
+	def decrementaTTL(self):
+		while(self.TTL>0):
+			time.sleep(1)
+			self.TTL -= 1
+		if next_node.ID == self.ID:
+			print "ALOOOOOOOOOOOOOOO: ", self.ID, "SAAAIU", next_node.ID
+			MSG = ["saiu",str(self.ID)]
+			next_node.ID = next_next_node.ID
+			next_node.PORT = next_next_node.PORT
+			next_node.TTL=20
+			thr1 = threading.Thread(target = next_node.decrementaTTL)
+			thr1.setDaemon(True)
+			thr1.start()
+			sock.sendto(json.dumps(MSG), (IP_SERVER, PORT_SERVER))
+		else:
+			print "ALOOOOOOOOOOOOOOO: ", self.ID, "SAAAIU", prev_node.ID
+			prev_node.ID = prev_prev_node.ID
+			prev_node.PORT = prev_prev_node.PORT
+			prev_node.TTL=20
+			thr1 = threading.Thread(target = prev_node.decrementaTTL)
+			thr1.setDaemon(True)
+			thr1.start()
+		print "VIZINHOS " + "NEXT: ", next_node.ID, "ANTERIOR: ", prev_node.ID
 	
 	def resetTTL(self):
 		self.TTL = 20
@@ -83,20 +106,18 @@ def main():
 	thr1 = threading.Thread(target = ping_next)
 	#thr2 = threading.Thread(target = ping_prev)
 	thr3 = threading.Thread(target = msg_rcv)
-	thr4 = threading.Thread(target = decrementaTTL_next)
-	thr4.setDaemon(True)
-	thr4.start()
-	thr5 = threading.Thread(target = decrementaTTL_prev)
-	thr5.setDaemon(True)
-	thr5.start()
+	thr4 = threading.Thread(target = next_node.decrementaTTL)
+	thr5 = threading.Thread(target = prev_node.decrementaTTL)
 	thr1.setDaemon(True)
 	#thr2.setDaemon(True)
 	thr3.setDaemon(True)
-	
+	thr4.setDaemon(True)
+	thr5.setDaemon(True)
 	thr1.start()
 	#thr2.start()
 	thr3.start()
-	
+	thr4.start()
+	thr5.start()
 	# Encerra o programa caso Ctrl+D (EOF) seja inserido
 	try:
 		while (input()):
@@ -109,6 +130,7 @@ def main():
 def ping_next():
 	global next_node
 	global prev_node
+	global PORT_root
 	while True:
 		MSG = "PREV2: " + str(prev_node.ID) + " " + str(prev_node.PORT)
 		sock.sendto(MSG , (MY_IP, next_node.PORT))
@@ -116,30 +138,11 @@ def ping_next():
 		sock.sendto(MSG , (MY_IP, prev_node.PORT))
 		time.sleep(5)
 
-def decrementaTTL_next():
-	global next_node
-	while(next_node.TTL > 0):
-		time.sleep(1)
-		next_node.TTL -= 1
-	MSG = ["saiu",str(next_node.ID)]
-	next_node.ID = next_next_node.ID
-	next_node.PORT = next_next_node.PORT
-	next_node.TTL=20
-	sock.sendto(json.dumps(MSG), (IP_SERVER, PORT_SERVER))
-	print "VIZINHOS " + "NEXT: ", next_node.ID, "ANTERIOR: ", prev_node.ID
-	decrementaTTL_next()
-	
-
-def decrementaTTL_prev():
-	global prev_node
-	while(prev_node.TTL > 0):
-		time.sleep(1)
-		prev_node.TTL -= 1
-	prev_node.ID = prev_prev_node.ID
-	prev_node.PORT = prev_prev_node.PORT
-	prev_node.TTL=20
-	print "VIZINHOS " + "NEXT: ", next_node.ID, "ANTERIOR: ", prev_node.ID
-	decrementaTTL_prev()
+#def ping_prev():
+	#while True:
+		#MSG = "NEXT2: " + str(next_node.ID) + " " + str(next_node.PORT)
+		#sock.sendto(MSG , (MY_IP, prev_node.PORT))
+		#time.sleep(5)
 
 def search_neighboors(PORT):
 	global next_node
