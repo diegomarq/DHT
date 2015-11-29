@@ -133,7 +133,7 @@ class Rendezvous:
 			return id
 		
 		#Data serializer
-		data = ( id, {"IDroot":0, "Rip":self.rootIP, "Rport":self.rootPort})
+		data = ( id, {"IDroot":0, "Rip":self.rootIP, "Rport":self.rootPort}, self.maxid)
 		serial_data = json.dumps(data)
 		
 		#server.sendto(str(id), addr)

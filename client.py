@@ -2,6 +2,7 @@ import socket
 import time
 import json
 import threading
+import math
 from random import randint
 
 class Node:
@@ -17,6 +18,10 @@ class Node:
 	def resetTTL(self):
 		self.TTL = 20
 
+class Movie:
+	ID = -1
+	name = ""
+
 sair = 0
 def set_port():
 	port = randint(1025,65535)
@@ -30,6 +35,7 @@ def set_port():
 IP_SERVER = "127.0.0.1"
 PORT_SERVER = 8888
 
+maxid = -1
 self_ID = -1;
 next_node = Node(-1, "0")
 prev_node = Node(-1, "0")
@@ -37,6 +43,7 @@ next_next_node = Node(-1, "0")
 prev_prev_node = Node(-1, "0")
 PORT_root = -1
 root = False
+hash_table = []
 
 MY_IP = "localhost"
 MY_PORT = set_port()
@@ -49,6 +56,7 @@ def main():
 	global prev_node
 	global PORT_root
 	global sair
+	global maxid
 	# Mensagem Hello
 	MSG = ["hello", "1"]
 	sock.sendto(json.dumps(MSG), (IP_SERVER, PORT_SERVER))
@@ -61,7 +69,8 @@ def main():
 	self_ID = int(data[0])
 	aux = data[1]["Rport"]
 	PORT_root = int(aux)
-	print "MEU ID: ", self_ID, PORT_root
+	maxid = int(data[2])
+	print "maxid: ", maxid
 	
 	# Mensagem de ACK 
 	MSG = ["ack"]
@@ -74,6 +83,7 @@ def main():
 		next_node.ID = self_ID
 		prev_node.PORT = MY_PORT
 		prev_node.ID = self_ID
+		putInMem()
 	else:
 		search_neighboors(PORT_root)
 		warn_neighboors()
@@ -81,21 +91,21 @@ def main():
 	print "VIZINHOS " + "NEXT: ", next_node.ID, "ANTERIOR: ", prev_node.ID
 	
 	thr1 = threading.Thread(target = ping_next)
-	#thr2 = threading.Thread(target = ping_prev)
 	thr3 = threading.Thread(target = msg_rcv)
 	thr4 = threading.Thread(target = decrementaTTL_next)
-	thr4.setDaemon(True)
-	thr4.start()
 	thr5 = threading.Thread(target = decrementaTTL_prev)
-	thr5.setDaemon(True)
-	thr5.start()
+	thr6 = threading.Thread(target = SS_movie)
 	thr1.setDaemon(True)
-	#thr2.setDaemon(True)
 	thr3.setDaemon(True)
-	
+	thr4.setDaemon(True)
+	thr5.setDaemon(True)
+	thr6.setDaemon(True)
 	thr1.start()
-	#thr2.start()
 	thr3.start()
+	thr4.start()
+	thr5.start()
+	thr6.start()
+	
 	
 	# Encerra o programa caso Ctrl+D (EOF) seja inserido
 	try:
@@ -104,7 +114,50 @@ def main():
 	except EOFError:
 		sock.close()
 		return
+	
+def SS_movie():
+	while True:
+		MSG = raw_input("Digite SEARCH: 'movie' ou STORAGE: 'movie': ")
+		MSG = MSG + " " + MY_IP + " " + str(MY_PORT)
+		sock.sendto(MSG, (MY_IP, PORT_root))
 
+def hash_function(name):
+	soma = 0
+	for c in name:
+		soma += ord(c)
+	return soma % maxid
+
+def has_movie(name, origem_IP, origem_PORT):
+	mov_id = hash_function(name)
+	if(next_node.ID == 0 and self_ID != 0):
+		ID_next = maxid
+	else:
+		ID_next = next_node.ID
+	if abs(self_ID - mov_id) > abs(ID_next - mov_id) :
+		return False
+	else:
+		return True
+		
+
+#Function to see if a movie is in hash
+def haveInHash(name):
+	print '**************************************************************'
+	print 'ID list'
+	for elem in hash_table:
+		print "aa " + elem[1] + " " + name
+		if elem[1] == name:
+			print "ID: ", elem[0]
+			return True
+	return False
+
+def putInMem():
+	global hash_table
+	file1 = open("conf.txt")
+	for movie in file1:
+		movie = movie.strip('\n')
+		mov_id = hash_function(movie)
+		print mov_id, movie
+		hash_table.append((mov_id, movie))
 
 def ping_next():
 	global next_node
@@ -201,6 +254,24 @@ def msg_rcv():
 			next_node.resetTTL()
 			next_next_node.ID = int(text[1])
 			next_next_node.PORT = int(text[2])
+		elif(text[0] == "SEARCH:"):
+			if has_movie(text[1], text[2], int(text[3])) == True:
+				if haveInHash(text[1]) == True:
+					MSG = "END: 1"
+				else:
+					MSG = "END: 0"
+				sock.sendto(MSG, (text[2], int(text[3])))
+			else:
+				MSG = "SEARCH: " + text[1] + " " + text[2] + " " + text[3]
+				sock.sendto(MSG, (MY_IP, next_node.PORT))
+				
+		elif(text[0] == "STORAGE:"):
+			soma = 1
+		elif(text[0] == "END:"):
+			if(text[1] == "1"):
+				print "Beleza, filme existe, vou baixar"
+			else:
+				print "Putz, filme nao existe, vou procurar no Google"
 
 if __name__ == "__main__":
 	main()
