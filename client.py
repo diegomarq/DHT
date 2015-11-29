@@ -116,10 +116,12 @@ def main():
 		return
 	
 def SS_movie():
-	while True:
+	MSG ="1"
+	while MSG != "0":
 		MSG = raw_input("Digite SEARCH: 'movie' ou STORAGE: 'movie': ")
-		MSG = MSG + " " + MY_IP + " " + str(MY_PORT)
-		sock.sendto(MSG, (MY_IP, PORT_root))
+		if(MSG != "0"):
+			MSG = MSG + " " + MY_IP + " " + str(MY_PORT)
+			sock.sendto(MSG, (MY_IP, PORT_root))
 
 def hash_function(name):
 	soma = 0
@@ -158,6 +160,9 @@ def putInMem():
 		mov_id = hash_function(movie)
 		print mov_id, movie
 		hash_table.append((mov_id, movie))
+	hash_table.sort(key=lambda tup: tup[0])
+	for movie in hash_table:
+		print movie
 
 def ping_next():
 	global next_node
@@ -226,11 +231,50 @@ def warn_neighboors():
 	sock.sendto("PREV: " + str(self_ID) , (MY_IP, next_node.PORT))
 	sock.sendto("NEXT: " + str(self_ID) , (MY_IP, prev_node.PORT))
 
+def send_list_next(PORT, ind):
+	global hash_table
+	
+	lista = []
+	for i in hash_table:
+		if i[0] >= ind:
+			if i[0] > next_node.ID:
+				break
+			lista.append(i)
+			#hash_table.remove(i)
+	#lista = [(d, q) for d, q in hash_table if d >= ind and d <= next_node.ID]
+	
+	print "LISTA DO OUTRO"
+	print lista
+	print "\nLISTA DO 0"
+	print hash_table
+	MSG = "LIST: " + json.dumps(lista)
+	sock.sendto(MSG , (MY_IP, PORT))
+
+def send_list_prev(PORT, ind):
+	global hash_table
+	
+	lista = []
+	for i in hash_table:
+		if i[0] >= prev_node.ID:
+			if i[0] > ind:
+				break
+			lista.append(i)
+			#hash_table.remove(i)
+	#lista = [(d, q) for d, q in hash_table if d >= ind and d <= next_node.ID]
+	
+	print "LISTA DO OUTRO2"
+	print lista
+	print "\nLISTA DO 02"
+	print hash_table
+	MSG = "LIST: " + json.dumps(lista)
+	sock.sendto(MSG , (MY_IP, PORT))
+
 def msg_rcv():
 	global next_node
 	global prev_node
 	global next_next_node
 	global prev_prev_node
+	global hash_table
 	
 	while True:
 		data, addr = sock.recvfrom(1024) # buffer size is 1024 bytes
@@ -241,9 +285,17 @@ def msg_rcv():
 		elif(text[0] == "NEXT:"):
 			next_node.PORT = addr[1]
 			next_node.ID = int(text[1])
+			ind = (next_node.ID + self_ID)/2 + 1
+			send_list_next(next_node.PORT, ind)
 		elif(text[0] == "PREV:"):
 			prev_node.PORT = addr[1]
 			prev_node.ID = int(text[1])
+			ID_calc = self_ID
+			if(self_ID == 0):
+				ID_calc = maxid
+			ind = (prev_node.ID + ID_calc)/2
+			print "aa", ind
+			send_list_prev(prev_node.PORT, ind)
 		elif(text[0] == "PREV2:"):
 			#print "PING PREV2: "
 			prev_node.resetTTL()
@@ -272,6 +324,18 @@ def msg_rcv():
 				print "Beleza, filme existe, vou baixar"
 			else:
 				print "Putz, filme nao existe, vou procurar no Google"
-
+		elif(text[0] == "LIST:"):
+			del text[0]
+			text = ' '.join(text)
+			lista = []
+			lista = json.loads(text)
+			for x in lista:
+				if x in hash_table:
+					continue
+				hash_table.append(x)
+				
+			for movie in hash_table:
+				print "aa " + str(movie[0]) + " bb " + movie[1]
+		
 if __name__ == "__main__":
 	main()
