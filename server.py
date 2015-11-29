@@ -3,7 +3,7 @@ import time
 from random import randint
 
 UDP_IP = "127.0.0.1"
-UDP_PORT = 5005
+UDP_PORT = 8888
 
 client_list = {}
 
@@ -18,15 +18,15 @@ def main():
 		
 		if(bool(client_list) == False):
 			id_client = "0"
-			ip_root = addr[0]
-			msg = "0 0.0.0.0"
+			port_root = addr[1]
+			msg = "0 -1"
 		else:
 			id_client = str(randint(0,50));
 			while(id_client in client_list.keys()):
 				id_client = str(randint(0,50));
-			msg = id_client + " " + ip_root
-		client_list[id_client] = addr[0]
-		sock.sendto(msg, (addr[0], UDP_PORT))
+			msg = id_client + " " + str(port_root)
+		client_list[id_client] = addr
+		sock.sendto(msg, (addr))
 		
 		data, addr = sock.recvfrom(1024)
 		print "received message:", data, "from: ", addr
